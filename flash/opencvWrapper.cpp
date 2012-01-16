@@ -4,11 +4,11 @@
 #include "lrint.cpp"
 
 // FIXME embed haarcascade definition files (old version ?)
-extern "C"
+/*extern "C"
 {
 	#include <FbViolaJonesStaticFaceCascadeData.h>
 	#include <FbViolaJonesStaticEyesCascadeData.h>
-}
+}*/
 
 //screen buffer
 long bufferSize;
@@ -42,7 +42,7 @@ static AS3_Val freeByteArray(void* self, AS3_Val args)
 static AS3_Val setFrameParams(void* self, AS3_Val args)
 {
 	AS3_ArrayValue(args,"IntType, IntType, IntType",&frameWidth,&frameHeight,&frameChannels);
-	fprintf(stderr, "[OPENCV] setFrameParams: %d - %d - %d", frameWidth, frameHeight, frameChannels);
+	//fprintf(stderr, "[OPENCV] setFrameParams: %d - %d - %d", frameWidth, frameHeight, frameChannels);
 	return 0;
 }
 
@@ -53,20 +53,7 @@ static AS3_Val setFilterType(void* self, AS3_Val args)
 }
 
 static AS3_Val applyFilter(void* self, AS3_Val args)
-{
-	//return 0 ;
-	// TODO no parameters : use shared memory to write/read a bytearray (AlchemyParticlePusher sample)
-	//parse parameters
-	//AS3_Val byteArr;
-	//long szByteArr = frameHeight * frameWidth * 4;
-	//AS3_ArrayValue(args, "AS3ValType", &byteArr);
-
-	//alloc memory for transfers
-	//uchar *dst = new uchar[szByteArr];
-
-	//read data
-	//AS3_ByteArray_readBytes((void*)dst,byteArr,szByteArr);
-	
+{	
 	// convert ARGB to BGRA :
 	cv::Mat imgflash (frameHeight, frameWidth, CV_8UC4, (void*)buffer);//(void*)dst);
 	cv::Mat img (imgflash.rows, imgflash.cols, CV_8UC4);
@@ -78,43 +65,30 @@ static AS3_Val applyFilter(void* self, AS3_Val args)
 		cv::Mat grayImg;
 		cv::cvtColor (img, grayImg, CV_BGRA2GRAY);
 
-		//mix channels
+		//mix channels so we output rgb data
 		int from_to_gs[] = { 0,0,  0,1,  0,2 };
 		mixChannels (&grayImg, 1, &img, 1, from_to_gs, 3);
 		
 	// medianBlur filter
 	} else if (strcmp (filterType, "medianBlur") == 0) {
-		cv::medianBlur( img, img, 5);
+		cv::medianBlur (img, img, 5);
 		
 	// flip vertical
 	} else if (strcmp (filterType, "verticalMirror") == 0) {
-		cv::Mat flipImg;
-		cv::flip (img, flipImg, 0);
-		
-		//mix channels
-		int from_to_vf[] = { 0,0,  1,1,  2,2, 3,3 };
-		mixChannels (&flipImg, 1, &img, 2, from_to_vf, 4);
+		cv::flip (img, img, 0);
 		
 	// flip horizontal
 	} else if (strcmp (filterType, "horizontalMirror") == 0) {
-		cv::Mat flipImg;
-		cv::flip (img, flipImg, 1);
-		
-		//mix channels
-		int from_to_hf[] = { 0,0,  1,1,  2,2, 3,3 };
-		mixChannels (&flipImg, 1, &img, 2, from_to_hf, 4);
+		cv::flip (img, img, 1);
 	}
 	
 	// convert BGRA to ARGB :
 	cv::Mat out( img.rows, img.cols, CV_8UC4 );
 	mixChannels( &img, 1, &out, 2, from_to, 4 );
-	// FIXME copy output image data to buffer
+	
+	// copy output image data to buffer
 	out.copyTo (imgflash);
 	
-	/*AS3_ByteArray_seek (byteArr, 0, SEEK_SET);
-	AS3_ByteArray_writeBytes (byteArr, out.data, szByteArr);
-	delete[] dst;
-	return byteArr;*/
 	return 0;
 }
 
