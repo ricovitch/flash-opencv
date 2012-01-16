@@ -23,7 +23,7 @@ rm *achacks* *.swc ; alc-on; g++ -swc -Wall -O3 -DOSX -I../include -o camlib.swc
 SWF
 rm *.swf ; alc-on; mxmlc -target-player=10.0.0 -library-path+=camlib.swc WebCam.as; alc-off;
 
-_____________________________________ WINDOWS / CYGWIN ____________________________________________
+_______________________________ WINDOWS / CYGWIN ________________________________________
 C++ sources (opencv)
 alc-on; rm -rf log ; rm -f *.o; mkdir log ; for src in *.cpp ; do g++ -I$repo_root/include -c -Wall -O3 -o ${PWD##*/}_`basename $src .cpp`.o $src 2> `basename $src .cpp`.log ; done ; mv -v *.log ./log ; alc-off; for f in ./log/*.log ; do grep 'error' $f ; done | cat | sort -u > ./log/errors.log ; less ./log/errors.log
 
