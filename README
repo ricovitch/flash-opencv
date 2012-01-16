@@ -1,15 +1,38 @@
 Build command for sources of camera interaction (will be a makefile later, also uses -DOSX hack for MacOSX compilation and may require additional raindancing to compile under other platforms):
+
+Build-run workflow:
+1. Build all sources
+2. Copy all .o's into $repo_root/flash/includes (to be linked against main wrapper)
+2.1. Currently you have to REMOVE core_system.o as it uses some assembly that would not translate into bytecode.
+2.2. On windows/cygwin, seems we must exclude also lapack/slas*.cpp (assembly also ?)
+3. Build wrapper swc library
+4. Build swf
+
+$repo_root > path to your working copy (on cygwin use /cygdrive/C/...)
+
+_____________________________________ MacOSX ____________________________________________
 C++ sources (opencv)
 alc-on; rm -rdf log ; rm -f *.o; mkdir log ; for src in *.cpp ; do g++ -I$repo_root/include -DOSX -c -Wall -O3 -o ${PWD##*/}_`basename $src .cpp`.o $src 2> `basename $src .cpp`.log ; done ; mv -v *.log ./log ; alc-off; for f in ./log/*.log ; do grep 'error' $f ; done | cat | sort -u > ./log/errors.log ; less ./log/errors.log
 
 C sources (zlib, lapack)
 alc-on; rm -rdf log ; rm -f *.o; mkdir log ; for src in *.c ; do gcc -I$repo_root/include -DOSX -c -Wall -O3 -o ${PWD##*/}_`basename $src .c`.o $src 2> `basename $src .c`.log ; done ; mv -v *.log ./log ; alc-off; for f in ./log/*.log ; do grep 'error' $f ; done | cat | sort -u > ./log/errors.log ; less ./log/errors.log
 
-Build-run workflow:
-1. Build all sources
-2. Copy all .o's into $repo_root/flash (to be linked against main wrapper)
-2.1. Currently you have to REMOVE core_system.o as it uses some assembly that would not translate into bytecode.
-3. Build wrapper swc library:
+Wrapper swc (flash)
 rm *achacks* *.swc ; alc-on; g++ -swc -Wall -O3 -DOSX -I../include -o camlib.swc *.o camlib.cpp ; alc-off;
-4. Build swf: 
+
+SWF
 rm *.swf ; alc-on; mxmlc -target-player=10.0.0 -library-path+=camlib.swc WebCam.as; alc-off;
+
+_____________________________________ WINDOWS / CYGWIN ____________________________________________
+C++ sources (opencv)
+alc-on; rm -rf log ; rm -f *.o; mkdir log ; for src in *.cpp ; do g++ -I$repo_root/include -c -Wall -O3 -o ${PWD##*/}_`basename $src .cpp`.o $src 2> `basename $src .cpp`.log ; done ; mv -v *.log ./log ; alc-off; for f in ./log/*.log ; do grep 'error' $f ; done | cat | sort -u > ./log/errors.log ; less ./log/errors.log
+
+C sources (zlib, lapack)
+alc-on; rm -rf log ; rm -f *.o; mkdir log ; for src in *.c ; do gcc -I$repo_root/include -c -Wall -O3 -o ${PWD##*/}_`basename $src .c`.o $src 2> `basename $src .c`.log ; done ; mv -v *.log ./log ; alc-off; for f in ./log/*.log ; do grep 'error' $f ; done | cat | sort -u > ./log/errors.log ; less ./log/errors.log
+
+Wrapper swc (flash)
+rm *achacks* *.swc ; alc-on; g++ -swc -Wall -O3 -I../include -o opencv.swc ./includes/*.o opencvWrapper.cpp ; alc-off;
+
+if this doesn't work, try to first compile *.o files in an archive with ar tool :
+ar rc opencv.a ./includes/*.o
+rm *achacks* *.swc ; alc-on; g++ -swc -Wall -O3 -I../include -Ifb -o opencv.swc opencv.a opencvWrapper.cpp ; alc-off;
