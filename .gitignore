@@ -7,3 +7,11 @@ src/opencv/core/log/
 src/opencv/imgproc/log/
 src/opencv/objdetect/log/
 src/zlib/log/
+
+/flash/includes
+/flash/swc
+/flash/excludes
+/flash/fb
+/flash/opencv.l.bc
+/flash/opencv.swc
+/flash/opencv.a
