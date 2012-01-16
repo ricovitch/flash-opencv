@@ -54,20 +54,17 @@ static AS3_Val setFilterType(void* self, AS3_Val args)
 
 static AS3_Val applyFilter(void* self, AS3_Val args)
 {	
-	// convert ARGB to BGRA :
-	cv::Mat imgflash (frameHeight, frameWidth, CV_8UC4, (void*)buffer);//(void*)dst);
-	cv::Mat img (imgflash.rows, imgflash.cols, CV_8UC4);
-	int from_to[] = { 0,3,  1,2,  2,1,  3,0 };
-	mixChannels( &imgflash, 1, &img, 2, from_to, 4 );
+	// Flash image data in ARGB format :
+	cv::Mat img (frameHeight, frameWidth, CV_8UC4, (void*)buffer);
 	
 	// grayScale filter
 	if (strcmp (filterType, "grayScale") == 0) {
 		cv::Mat grayImg;
-		cv::cvtColor (img, grayImg, CV_BGRA2GRAY);
+		cv::cvtColor (img, grayImg, CV_RGBA2GRAY); // should be ARGB2GRAY ?
 
-		//mix channels so we output rgb data
-		int from_to_gs[] = { 0,0,  0,1,  0,2 };
-		mixChannels (&grayImg, 1, &img, 1, from_to_gs, 3);
+		//mix channels so we output argb data
+		int gs_to_argb[] = { 0,1,  0,2,  0,3 };
+		mixChannels (&grayImg, 1, &img, 1, gs_to_argb, 3);
 		
 	// medianBlur filter
 	} else if (strcmp (filterType, "medianBlur") == 0) {
@@ -81,13 +78,6 @@ static AS3_Val applyFilter(void* self, AS3_Val args)
 	} else if (strcmp (filterType, "horizontalMirror") == 0) {
 		cv::flip (img, img, 1);
 	}
-	
-	// convert BGRA to ARGB :
-	cv::Mat out( img.rows, img.cols, CV_8UC4 );
-	mixChannels( &img, 1, &out, 2, from_to, 4 );
-	
-	// copy output image data to buffer
-	out.copyTo (imgflash);
 	
 	return 0;
 }
