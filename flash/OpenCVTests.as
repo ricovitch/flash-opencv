@@ -24,7 +24,7 @@ package
 	import flash.utils.Timer;
 	import flash.utils.getTimer;
 	
-	[SWF(frameRate=30)]
+	[SWF(frameRate=60)]
 	public class OpenCVTests extends Sprite
 	{
 		// opencv cascade files
@@ -35,6 +35,11 @@ package
 		[Embed(source="haarcascade_eye_tree_eyeglasses.xml", mimeType="application/octet-stream")]
 		private const CASCADE_NESTED_FILE:Class;
 		private var _cascadeNestedFile:ByteArray = new CASCADE_NESTED_FILE() as ByteArray;
+		
+		private static const COLS:int = 640;
+		private static const ROWS:int = 480;
+		/*private static const COLS:int = 320;
+		private static const ROWS:int = 240;*/
 		
 		// opencv c library
 		private var _openCVCLib:CLibInit;
@@ -114,7 +119,7 @@ package
 			
 			// debug TF
 			_debugTF = addChild (new TextField ()) as TextField;
-			_debugTF.width = 640;
+			_debugTF.width = COLS;
 			_debugTF.multiline = true;
 			_debugTF.wordWrap = true;
 			_debugTF.autoSize = TextFieldAutoSize.LEFT;
@@ -134,8 +139,8 @@ package
 		{
 			_stats.x = stage.stageWidth - 100;
 			_stats.y = 20;
-			_bmp.x = _debugTF.x = (stage.stageWidth - 640)*.5;
-			_bmp.y = (stage.stageHeight - 480)*.5;
+			_bmp.x = _debugTF.x = (stage.stageWidth - COLS)*.5;
+			_bmp.y = (stage.stageHeight - ROWS)*.5;
 			_debugTF.y = _bmp.y + 490;
 		}
 		
@@ -158,7 +163,7 @@ package
 			_camera = Camera.getCamera();
 			//initialized camera
 			if (_camera!=null){
-				_camera.setMode(640,480,30,true);
+				_camera.setMode(COLS,ROWS,30,true);
 				
 				//make a new video obj
 				_video = new Video(_camera.width,_camera.height);
