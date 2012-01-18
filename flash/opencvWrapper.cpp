@@ -59,9 +59,9 @@ static AS3_Val applyFilter(void* self, AS3_Val args)
 	// Flash image data in ARGB format :
 	cv::Mat img (frameHeight, frameWidth, CV_8UC4, (void*)buffer);
 	// C process duration
-	struct timeval start, end;
+	/*struct timeval start, end;
     long mtime, seconds, useconds;
-    gettimeofday(&start, NULL);
+    gettimeofday(&start, NULL);*/
 	
 	// grayScale filter
 	if (strcmp (filterType, "grayScale") == 0) {
@@ -85,11 +85,11 @@ static AS3_Val applyFilter(void* self, AS3_Val args)
 		cv::flip (img, img, 1);
 	}
 	// C process duration
-	gettimeofday(&end, NULL);
+	/*gettimeofday(&end, NULL);
     seconds  = end.tv_sec  - start.tv_sec;
     useconds = end.tv_usec - start.tv_usec;
     mtime = ((seconds) * 1000 + useconds/1000.0) + 0.5;
-	fprintf(stderr, "[OPENCV] applyFilter: %ld", mtime);
+	fprintf(stderr, "[OPENCV] applyFilter: %ld", mtime);*/
 	
 	return 0;
 }
