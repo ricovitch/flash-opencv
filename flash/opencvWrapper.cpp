@@ -1,6 +1,7 @@
 #include "AS3.h"
 #include "opencv/cv.h"
 #include <stdio.h>
+#include <sys/time.h>
 #include "lrint.cpp"
 
 // FIXME embed haarcascade definition files (old version ?)
@@ -17,6 +18,7 @@ char* buffer;
 int frameWidth, frameHeight, frameChannels;
 //filter to apply
 char * filterType = "grayScale";
+cv::CascadeClassifier cascade, nestedCascade;
 
 //FLASH: C memory init function
 static AS3_Val initByteArray(void* self, AS3_Val args)
@@ -56,6 +58,10 @@ static AS3_Val applyFilter(void* self, AS3_Val args)
 {	
 	// Flash image data in ARGB format :
 	cv::Mat img (frameHeight, frameWidth, CV_8UC4, (void*)buffer);
+	// C process duration
+	struct timeval start, end;
+    long mtime, seconds, useconds;
+    gettimeofday(&start, NULL);
 	
 	// grayScale filter
 	if (strcmp (filterType, "grayScale") == 0) {
@@ -78,48 +84,74 @@ static AS3_Val applyFilter(void* self, AS3_Val args)
 	} else if (strcmp (filterType, "horizontalMirror") == 0) {
 		cv::flip (img, img, 1);
 	}
+	// C process duration
+	gettimeofday(&end, NULL);
+    seconds  = end.tv_sec  - start.tv_sec;
+    useconds = end.tv_usec - start.tv_usec;
+    mtime = ((seconds) * 1000 + useconds/1000.0) + 0.5;
+	fprintf(stderr, "[OPENCV] applyFilter: %ld", mtime);
 	
 	return 0;
 }
 
 //FLASH: load face detection cascades xml files from flash bytearrays
 //must use clib.supplyFile method before calling this method from flash
-/*static AS3_Val loadCascades(void* self, AS3_Val args)
+static AS3_Val loadCascade(void* self, AS3_Val args)
 {
 	//parse parameters
+	char * cascadeType;
 	char * cascadeFileName;
-	char * nestedCascadFileName;
-	AS3_ArrayValue(args,"StrType, StrType", &cascadeFileName, &nestedCascadFileName);
+	AS3_ArrayValue(args,"StrType, StrType", &cascadeType, &cascadeFileName);
 	
-	if( !cascade.load( cascadeFileName ) )
-    {
-		return AS3_String("error loading cascade file");
+	FILE * file;
+	long fileSize;
+	char * fileBuffer;
+	file = fopen(cascadeFileName, "rb");
+ 
+	//Get file size
+	fseek (file, 0, SEEK_END);
+	fileSize = ftell(file);
+	rewind(file);
+ 
+	//Allocate buffer
+	fileBuffer = (char*) malloc(sizeof(char)*fileSize);
+ 
+	//Read file into buffer
+	fread(fileBuffer, 1, fileSize, file);
+	fprintf(stderr, "[OPENCV] loadCascades: %s : %s", cascadeType, cascadeFileName);
+	
+	//CV CascadeClassifier instance init
+	/*cv::FileStorage cascadeFileStorage;
+	cascadeFileStorage.open (cascadeFileName, cv::FileStorage::READ);
+	fprintf(stderr, "[OPENCV] loadCascades: cascade files empty : %d", cascadeFileStorage.getFirstTopLevelNode().empty());
+	bool success = cascade.read (cascadeFileStorage.getFirstTopLevelNode());
+	fprintf(stderr, "[OPENCV] loadCascades: cascade files empty : %d", cascade.empty());
+	cascadeFileStorage.release ();*/
+	
+	/*CvHaarClassifierCascade* cascadeClassifier = (CvHaarClassifierCascade*) cvLoad(cascadeFileName,0,0,0);
+	fprintf(stderr, "[OPENCV] loadCascades: cascade files loaded");*/
+	
+	cv::FileNode cascadeFileNode;
+	cascadeFileNode.readRaw ("xml", reinterpret_cast<uchar*>(fileBuffer), fileSize);
+	bool success = cascade.read (cascadeFileNode);
+	fprintf(stderr, "[OPENCV] loadCascades: cascade files empty : %d", cascade.empty());
+	if (success) {
+		fprintf(stderr, "[OPENCV] loadCascades: cascade files loaded with success !");
+	} else {
+		fprintf(stderr, "[OPENCV] loadCascades: cascade files failed to load !");
 	}
-	if( !nestedCascade.load( nestedCascadFileName ) )
-    {
-		return AS3_String("error loading nested cascade file");
-	}
-	return AS3_String("cascade files loaded with success !");
-}*/
+	
+	//close file and free allocated buffer
+	fclose (file);
+	free (fileBuffer);
+	
+	return 0;
+}
 
 static AS3_Val detectAndDraw(void* self, AS3_Val args)
-{
-	//parse parameters
-	AS3_Val byteArr;
-	long szByteArr = frameHeight * frameWidth * 4;
-	AS3_ArrayValue (args, "AS3ValType", &byteArr);
-	
-	//alloc memory for transfers
-	uchar *dst = new uchar[szByteArr];
-	
-	//read data
-	AS3_ByteArray_readBytes ((void*)dst, byteArr, szByteArr);
-
-	//image > convert argb to bgra :
-	cv::Mat imgflash (frameHeight, frameWidth, CV_8UC4, (void*)dst);
-	cv::Mat img (imgflash.rows, imgflash.cols, CV_8UC4);
-	int from_to[] = { 0,3,  1,2,  2,1,  3,0 };
-	mixChannels( &imgflash, 1, &img, 2, from_to, 4 );
+{	
+	// Flash image data in ARGB format :
+	cv::Mat img (frameHeight, frameWidth, CV_8UC4, (void*)buffer);
 
     int i = 0;
     double t = 0;
@@ -191,17 +223,9 @@ static AS3_Val detectAndDraw(void* self, AS3_Val args)
             // // radius = cvRound((nr->width + nr->height)*0.25*scale);
             // // circle( img, center, radius, color, 3, 8, 0 );
         // // }
-    // }  
-    //cv::imshow( "result", img );
+    // }
 	
-	// convert bgra back to argb :
-	cv::Mat out( img.rows, img.cols, CV_8UC4 );
-	mixChannels( &img, 1, &out, 2, from_to, 4 );
-	
-	AS3_ByteArray_seek(byteArr, 0, SEEK_SET);
-	AS3_ByteArray_writeBytes(byteArr, out.data, szByteArr);
-	delete[] dst;  
-	return byteArr;
+	return 0;
 }
 
 //entry point
@@ -210,7 +234,7 @@ int main()
 	AS3_Val initByteArrayMethod = AS3_Function(NULL, initByteArray);
 	AS3_Val freeByteArrayMethod = AS3_Function(NULL, freeByteArray);
 	AS3_Val setFrameParamsMethod = AS3_Function(NULL, setFrameParams);
-	//AS3_Val loadCascadesMethod = AS3_Function(NULL, loadCascades);
+	AS3_Val loadCascadeMethod = AS3_Function(NULL, loadCascade);
 	AS3_Val detectAndDrawMethod = AS3_Function(NULL, detectAndDraw);
 	AS3_Val applyFilterMethod = AS3_Function(NULL, applyFilter);
 	AS3_Val setFilterTypeMethod = AS3_Function(NULL, setFilterType);
@@ -218,13 +242,14 @@ int main()
 	AS3_Val result = AS3_Object("initByteArray: AS3ValType,\
 		freeByteArray: AS3ValType,\
 		setFrameParams: AS3ValType,\
+		loadCascade: AS3ValType,\
 		detectAndDraw: AS3ValType,\
 		applyFilter: AS3ValType,\
 		setFilterType: AS3ValType",
 		initByteArrayMethod,
 		freeByteArrayMethod,
 		setFrameParamsMethod,
-		//loadCascadesMethod,
+		loadCascadeMethod,
 		detectAndDrawMethod,
 		applyFilterMethod,
 		setFilterTypeMethod);
@@ -232,7 +257,7 @@ int main()
 	AS3_Release (initByteArrayMethod);
 	AS3_Release (freeByteArrayMethod);
 	AS3_Release (setFrameParamsMethod);
-	//AS3_Release (loadCascadesMethod);
+	AS3_Release (loadCascadeMethod);
 	AS3_Release (detectAndDrawMethod);
 	AS3_Release (applyFilterMethod);
 	AS3_Release (setFilterTypeMethod);
