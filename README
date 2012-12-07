@@ -1,3 +1,6 @@
+For a working port of OpenCV with FlasCC look here : https://github.com/alexmac/alcexamples
+
+
 Build command for sources of camera interaction (will be a makefile later, also uses -DOSX hack for MacOSX compilation and may require additional raindancing to compile under other platforms):
 
 Build-run workflow:
